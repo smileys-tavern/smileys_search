@@ -1,0 +1,118 @@
+source sql
+{
+	type     = pgsql
+
+	sql_host = host.com
+	sql_user = user
+	sql_pass = password
+	sql_db   = smiley
+}
+
+source postsummary_fast : sql
+{
+	sql_query = \
+		SELECT \
+			p.id, p.title, p.body, r.name AS room_name, p.age, p.votepublic, p.voteprivate, u.name AS user_name, p.inserted_at, \
+			pm.tags \
+		FROM \
+		    posts p LEFT JOIN rooms r ON p.superparentid = r.id \
+		    LEFT JOIN postmetas pm ON p.id = pm.postid \
+		    LEFT JOIN users u ON p.posterid = u.id \
+		WHERE \
+		    r.type != 'private' AND \
+			p.inserted_at > (CURRENT_TIMESTAMP - INTERVAL '12 HOUR')
+
+	sql_attr_uint      = votepublic
+	sql_attr_uint      = voteprivate
+	sql_attr_timestamp = inserted_at
+
+	sql_field_string = room_name
+	sql_field_string = user_name
+	sql_field_uint   = age
+}
+
+source postsummary_slow : sql
+{
+	sql_query = \
+		SELECT \
+			p.id, p.title, p.body, r.name AS room_name, p.age, p.votepublic, p.voteprivate, u.name AS user_name, p.inserted_at, \
+			pm.tags \
+		FROM \
+		    posts p LEFT JOIN rooms r ON p.superparentid = r.id \
+		    LEFT JOIN postmetas pm ON p.id = pm.postid \
+		    LEFT JOIN users u ON p.posterid = u.id \
+		WHERE \
+			r.type != 'private'
+
+	sql_attr_uint      = votepublic
+	sql_attr_uint      = voteprivate
+	sql_attr_timestamp = inserted_at
+
+	sql_field_string    = room_name
+	sql_field_string    = user_name
+}
+
+index default_index_settings
+{
+	docinfo    = extern
+	dict       = keywords
+	mlock      = 0
+	morphology = none
+
+	min_word_len  = 3
+	min_infix_len = 3
+
+	html_strip = 1
+
+	# wordforms = /home/ubuntu/wordforms
+	# exceptions = /home/ubuntu/exceptions
+}
+
+index postsummary_fast_index : default_index_settings
+{
+	source = postsummary_fast
+	path   = /home/ubuntu/sphinx/data/postsummary_fast
+}
+
+index postsummary_slow_index : default_index_settings
+{
+	source = postsummary_slow
+	path   = /home/ubuntu/sphinx/data/postsummary_slow
+}
+
+########################
+# INDEXER
+########################
+
+indexer
+{
+	mem_limit = 512M
+}
+
+
+########################
+# SEARCHD
+########################
+
+searchd
+{
+	listen = 9312
+	listen = 9306:mysql41
+
+	log         = /home/ubuntu/log/searchd.log
+	query_log   = /home/ubuntu/log/query.log
+	binlog_path = /home/ubuntu/log/
+
+	read_timeout      = 5
+	client_timeout    = 300
+	max_children      = 30
+	pid_file          = /home/ubuntu/searchd.pid
+	seamless_rotate   = 1
+	preopen_indexes   = 1
+	unlink_old        = 1
+	mva_updates_pool  = 1M
+	max_packet_size   = 8M
+	max_filters       = 256
+	max_filter_values = 4096
+	max_batch_queries = 32
+}
