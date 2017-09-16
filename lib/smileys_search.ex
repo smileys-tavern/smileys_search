@@ -79,8 +79,8 @@ defmodule SmileysSearch do
   """
   def get_doc_ids(giza_result) do
     case giza_result do
-      {:ok, %{matches: matches, total_found: total_found}} ->
-        {:ok, get_doc_ids(matches, []), total_found}
+      {:ok, %{matches: matches, total: total}} ->
+        {:ok, get_doc_ids(matches, []), total}
       {:error, error} ->
         {:error, error}
     end

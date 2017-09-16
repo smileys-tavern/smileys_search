@@ -17,16 +17,29 @@ defmodule SmileysSearch.QueryPost do
 	@doc """
 	Search posts site-wide
 	"""
-	def posts_all(term, offset) do
-		# infix search
-	    search_for = "*" <> term <> "*"
+	def posts_all(search_for, offset) do
+	    result = Giza.SphinxQL.new()
+	    	|> Giza.SphinxQL.select("*")
+	    	|> Giza.SphinxQL.from("postsummary_fast_index, postsummary_slow_index")
+	    	|> Giza.SphinxQL.limit(200)
+	    	|> Giza.SphinxQL.offset(offset)
+	    	|> Giza.SphinxQL.match(search_for)
+	    	|> Giza.Service.sphinxql_send()
 
-	    result = Giza.query('postsummary_fast_index postsummary_slow_index', search_for)
-	    	|> Giza.Query.offset(offset)
-	    	|> Giza.send()
-	    	# |> :giza_query.sort_extended('@weight + (voteprivate * 0.01)') NOT WORKING YET.. I think
-	  	
-	  	SmileysSearch.get_doc_ids(result)
+	    total_returned = case result do
+	    	{:ok, %{total: total}} ->
+	    		total
+	    	_ ->
+	    		0
+	    end
+
+	  	case Giza.get_doc_ids(result) do
+	  		{:ok, doc_ids} ->
+	  			filtered_doc_ids = Enum.take(doc_ids, 25)
+	  			{:ok, filtered_doc_ids, total_returned}
+	  		error ->
+	  			error
+	  	end
 	end
 
 	@doc """
@@ -35,7 +48,7 @@ defmodule SmileysSearch.QueryPost do
 	def posts_all(%{s: search_for} = params) do
 		result = Giza.query('postsummary_fast_index postsummary_slow_index', search_for)
 			|> SmileysSearch.build_query_from_map(params)
-			|> Giza.send()
+			|> Giza.Service.send()
 
 		SmileysSearch.get_doc_ids(result)
 	end

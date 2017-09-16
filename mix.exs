@@ -29,6 +29,8 @@ defmodule SmileysSearch.Mixfile do
   # Type "mix help deps" for more examples and options
   defp deps do
     [{:kerosene, "~> 0.5.0"},
-     {:giza_sphinxsearch, "~> 0.0.1"}]
+     {:giza_sphinxsearch, "~> 0.1.1"}
+     #{:giza_sphinxsearch, path: "../giza_sphinxsearch"}
+    ]
   end
 end
