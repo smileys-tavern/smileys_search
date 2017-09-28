@@ -21,17 +21,14 @@ defmodule SmileysSearch.QueryPost do
 	    result = Giza.SphinxQL.new()
 	    	|> Giza.SphinxQL.select("*")
 	    	|> Giza.SphinxQL.from("postsummary_fast_index, postsummary_slow_index")
-	    	|> Giza.SphinxQL.limit(200)
+	    	|> Giza.SphinxQL.limit(25)
 	    	|> Giza.SphinxQL.offset(offset)
 	    	|> Giza.SphinxQL.match(search_for)
 	    	|> Giza.Service.sphinxql_send()
 
-	    total_returned = case result do
-	    	{:ok, %{total: total}} ->
-	    		total
-	    	_ ->
-	    		0
-	    end
+	    {:ok, meta} = Giza.SphinxQL.meta()
+
+	    total_returned = String.to_integer(meta.total_found)
 
 	  	case Giza.get_doc_ids(result) do
 	  		{:ok, doc_ids} ->
